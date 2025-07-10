@@ -35,9 +35,9 @@ jobs:
           pip install --upgrade pip
           pip install setuptools
           pip install -r src/mcpo_simple_server/requirements.txt
-          pip install -r test/server/requirements-pytest.txt
+          pip install -r tests/server/requirements-pytest.txt
           uv --version
 
       - name: Run pytest with --clean
-        working-directory: ./test/server
+        working-directory: ./tests/server
         run: bash run.sh a --clean
