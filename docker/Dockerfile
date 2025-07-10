@@ -1,5 +1,6 @@
 FROM debian:trixie
 
+# TODO: https://www.fromlatest.io/
 LABEL MAINTAINER="Artur Zdolinski artur@zdolinski.com"
 ARG TZ
 ARG USER=appuser
@@ -34,7 +35,6 @@ WORKDIR /tmp
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get upgrade -y &&\
     apt-get install -y --no-install-recommends  \
     supervisor \
     libnss-wrapper \
@@ -112,7 +112,7 @@ RUN apt-get update \
 
 ### Install xvnc-server & noVNC - HTML5 based VNC viewer
 RUN apt-get update \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
     tigervnc-standalone-server \
     tigervnc-common \
     && apt-get clean -y \
@@ -160,6 +160,6 @@ RUN rm -rf ${APP_FOLDER}/data/config \
 
 # Use supervisord to manage both VNC and Uvicorn
 COPY ./docker/src/supervisor/conf.d/* /etc/supervisor/conf.d/
-ENTRYPOINT ["sudo", "-E", "/usr/bin/supervisord", "--nodaemon", "-c", "/etc/supervisor/supervisord.conf"]
+ENTRYPOINT ["sudo", "-E", "/usr/bin/supervisord", "--strip_ansi", "--nodaemon", "-c", "/etc/supervisor/supervisord.conf"]
 
-EXPOSE $VNC_PORT $NO_VNC_PORT
+EXPOSE 5901 6901 8080

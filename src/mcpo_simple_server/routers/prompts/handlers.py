@@ -9,7 +9,7 @@ from typing import List, Optional
 from mcpo_simple_server.services.prompt_manager import PromptManager
 from mcpo_simple_server.services.prompt_manager.models.prompts import PromptInfo, PromptExecuteRequest, PromptExecuteResponse, PromptMessage
 from mcpo_simple_server.routers.prompts import router
-from mcpo_simple_server.config import CONFIG_MAIN_FILE_PATH
+from mcpo_simple_server.config import CONFIG_STORAGE_PATH
 from loguru import logger
 
 # Global prompt manager instance
@@ -25,7 +25,7 @@ async def get_prompt_manager() -> PromptManager:
     """
     global PROMPT_MANAGER
     if PROMPT_MANAGER is None:
-        PROMPT_MANAGER = PromptManager(CONFIG_MAIN_FILE_PATH)
+        PROMPT_MANAGER = PromptManager(CONFIG_STORAGE_PATH)
         await PROMPT_MANAGER.load_all_prompts()
     return PROMPT_MANAGER
 

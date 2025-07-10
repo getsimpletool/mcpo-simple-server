@@ -3,6 +3,14 @@
 
 set -euo pipefail  # Exit on error, undefined vars fail, pipefail
 
+# Source environment variables if file exists
+ENV_FILE="$(dirname "$0")/build.env"
+if [ -f "$ENV_FILE" ]; then
+  echo "=== Loading environment variables from $ENV_FILE ==="
+  # shellcheck source=/dev/null
+  source "$ENV_FILE"
+fi
+
 echo "=== Testing package imports ===="
 cd "$(dirname "$0")"
 # Uncomment when you have tests
@@ -33,8 +41,21 @@ echo "python -m twine upload dist/*"
 
 echo "=== WE ARE DONE! WHAT NEXT? ==="
 
-# Ask user if they want to install locally
-read -r -p "Install mcpo-simple-server locally for testing? [y/N]: " install_locally
+# Check if LOCAL_INSTALL is defined in environment, otherwise ask user
+if [ -n "${LOCAL_INSTALL+x}" ]; then
+  # Variable is defined, use its value
+  if [ "$LOCAL_INSTALL" = true ]; then
+    install_locally="y"
+    echo "=== Environment variable LOCAL_INSTALL=true, installing locally ==="
+  else
+    install_locally="n"
+    echo "=== Environment variable LOCAL_INSTALL=false, skipping local install ==="
+  fi
+else
+  # Variable is not defined, ask user
+  read -r -p "Install mcpo-simple-server locally for testing? [y/N]: " install_locally
+fi
+
 case "$install_locally" in
   [Yy]*)
     echo "Removing any existing mcpo-simple-server package..."
@@ -46,21 +67,59 @@ case "$install_locally" in
   *) ;;
 esac
 
-# Ask user if they want to publish to TestPyPI
-read -r -p "Publish to TestPyPI? [y/N]: " publish_test
+# Check if TESTPYPI is defined in environment, otherwise ask user
+if [ -n "${TESTPYPI+x}" ]; then
+  # Variable is defined, use its value
+  if [ "$TESTPYPI" = true ]; then
+    publish_test="y"
+    echo "=== Environment variable TESTPYPI=true, publishing to TestPyPI ==="
+  else
+    publish_test="n"
+    echo "=== Environment variable TESTPYPI=false, skipping TestPyPI publish ==="
+  fi
+else
+  # Variable is not defined, ask user
+  read -r -p "Publish to TestPyPI? [y/N]: " publish_test
+fi
+
 case "$publish_test" in
   [Yy]*)
     echo "Publishing mcpo-simple-server package to TestPyPI..."
+    # Set Twine credentials if API key is provided in environment
+    if [ -z "${TWINE_USERNAME:-}" ] || [ -z "${TWINE_PASSWORD:-}" ]; then
+      echo "Error: TWINE_USERNAME and TWINE_PASSWORD must be set for TestPyPI publishing"
+      echo "Please set these variables in your environment or build.env file"
+      exit 1
+    fi
     python -m twine upload --repository testpypi dist/*
     ;;
   *) ;;
 esac
 
-# Ask user if they want to publish to PyPI
-read -r -p "Publish to PyPI? [y/N]: " publish_pypi
+# Check if PUBLISHPYPI is defined in environment, otherwise ask user
+if [ -n "${PUBLISHPYPI+x}" ]; then
+  # Variable is defined, use its value
+  if [ "$PUBLISHPYPI" = true ]; then
+    publish_pypi="y"
+    echo "=== Environment variable PUBLISHPYPI=true, publishing to PyPI ==="
+  else
+    publish_pypi="n"
+    echo "=== Environment variable PUBLISHPYPI=false, skipping PyPI publish ==="
+  fi
+else
+  # Variable is not defined, ask user
+  read -r -p "Publish to PyPI? [y/N]: " publish_pypi
+fi
+
 case "$publish_pypi" in
   [Yy]*)
     echo "Publishing mcpo-simple-server package to PyPI..."
+    # Set Twine credentials if API key is provided in environment
+    if [ -z "${TWINE_USERNAME:-}" ] || [ -z "${TWINE_PASSWORD:-}" ]; then
+      echo "Error: TWINE_USERNAME and TWINE_PASSWORD must be set for TestPyPI publishing"
+      echo "Please set these variables in your environment or build.env file"
+      exit 1
+    fi
     python -m twine upload dist/*
     ;;
   *) ;;

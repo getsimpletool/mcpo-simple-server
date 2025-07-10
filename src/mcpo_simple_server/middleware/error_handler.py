@@ -22,11 +22,14 @@ class ErrorHandlerMiddleware:
         except Exception as e:
             # Log the error with traceback
             logger.error(
-                f"Unhandled exception: {str(e)}\n"
-                f"Request path: {request.url.path}\n"
-                f"Traceback: {traceback.format_exc()}"
+                "Unhandled exception: %s\n"
+                "Request path: %s\n"
+                "Traceback: %s",
+                str(e),
+                request.url.path,
+                traceback.format_exc()
             )
-            
+
             # Return a JSON response with error details
             return JSONResponse(
                 status_code=500,

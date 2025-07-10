@@ -2,169 +2,89 @@ import asyncio
 import os
 import signal
 import sys
+from contextlib import asynccontextmanager
 from typing import Any
 from mcpo_simple_server.logger import logger
-from mcpo_simple_server.config import CONFIG_MAIN_FILE_PATH, APP_VERSION, APP_NAME
+from mcpo_simple_server.config import (
+    CONFIG_STORAGE_PATH,
+    MCPSERVER_CLEANUP_INTERVAL,
+    MCPSERVER_CLEANUP_TIMEOUT,
+    APP_VERSION,
+    APP_NAME
+)
+import mcpo_simple_server.routers.root as root_module
+import mcpo_simple_server.routers.user as user_module
 import mcpo_simple_server.routers.admin as admin_module
 import mcpo_simple_server.routers.public as public_module
-import mcpo_simple_server.routers.mcp_sse as mcp_sse_module
-import mcpo_simple_server.routers.tools as tools_module
-import mcpo_simple_server.routers.user as user_module
-from mcpo_simple_server.auth import dependencies as auth_dependencies
+import mcpo_simple_server.routers.ui as ui_module
+# import mcpo_simple_server.routers.mcp as mcp_module
+# import mcpo_simple_server.routers.prompts as prompts_module
+import mcpo_simple_server.routers.mcpservers as mcpservers_module
 from mcpo_simple_server.middleware import setup_middleware
+# Admin manager is now used for cleanup operations
 from mcpo_simple_server.services.config import ConfigService
 from mcpo_simple_server.services.mcpserver import McpServerService
+from mcpo_simple_server.services.config import set_config_service
+from mcpo_simple_server.services.mcpserver import set_mcpserver_service
+# Import MCP Streamable HTTP integration
+from mcpo_simple_server.services.mcp_streamable import setup_mcp_streamable
+from mcpo_simple_server.services.mcp_streamable.setup import mcp_streamable_lifespan
+# Import MCP SSE integration
+from mcpo_simple_server.services.mcp_sse import setup_mcp_sse
+from mcpo_simple_server.routers.mcp.v1_api_sse_docs import SSE_OPENAPI_PATHS  # Import custom SSE docs
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, responses
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from pydantic import BaseModel
-
+from fastapi.staticfiles import StaticFiles
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+from typing import Optional
 
 # Load environment variables from .env file
 load_dotenv()
 
-fastapi = FastAPI(
-    title=APP_NAME,
-    description="A simple FastAPI server template",
-    version=str(APP_VERSION)
-)
-
-# Setup middleware
-setup_middleware(fastapi)
-
-# Initialize services
-logger.info("Initializing Services")
-config_service = ConfigService(storage_type="files", settings={"config_file_path": CONFIG_MAIN_FILE_PATH})
-mcpserver_service = McpServerService(config_service=config_service)
-
-# Set 'config_service' in auth dependencies module
-auth_dependencies.set_config_service(config_service)
-
-# Include routers
-fastapi.include_router(user_module.router)
-fastapi.include_router(public_module.router)
-fastapi.include_router(admin_module.router)
-fastapi.include_router(mcp_sse_module.router)  # Include the SSE transport router
+_session_manager: Optional[StreamableHTTPSessionManager] = None
 
 
-def custom_openapi():
-    """
-    Custom OpenAPI generator that includes dynamic tool endpoints and patches /user/me.
-    """
-    if fastapi.openapi_schema:
-        return fastapi.openapi_schema
-    schema = get_openapi(
-        title=fastapi.title,
-        version=fastapi.version,
-        routes=fastapi.routes,
-    )
-    fastapi.openapi_schema = schema
-    return fastapi.openapi_schema
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+    # Initialize services
+    logger.info("Initializing Services")
+    fastapi_app.state.config_service = ConfigService(options={"db_path": CONFIG_STORAGE_PATH})
+    set_config_service(fastapi_app.state.config_service)
+    fastapi_app.state.mcpserver_service = McpServerService()
+    await fastapi_app.state.mcpserver_service.load_blacklist_tools()
+    set_mcpserver_service(fastapi_app.state.mcpserver_service)
 
-
-fastapi.openapi = custom_openapi
-
-
-@fastapi.get("/", include_in_schema=False, response_class=responses.HTMLResponse)
-async def root():
-    return f"""
-    <html>
-        <body>
-            <h3>Welcome to the {APP_NAME} API</h3>
-            <p>Check <a href="/docs">docs</a> or <a href="/redoc">redoc</a> for API documentation</p>
-            <p>Check <a href="/tools/openapi.json">tools</a> for tools documentation</p>
-        </body>
-    </html>
-    """
-
-
-class HealthResponse(BaseModel):
-    status: str
-
-
-@fastapi.get("/health", response_model=HealthResponse, include_in_schema=False)
-async def handle_health():
-    return {"status": "ok"}
-
-
-class PingResponse(BaseModel):
-    response: str
-
-
-@fastapi.get("/ping", response_model=PingResponse, include_in_schema=False)
-async def handle_ping():
-    return {"response": "pong"}
-
-
-@fastapi.get("/tools/openapi.json", include_in_schema=False)
-async def get_tools_openapi(tools_router=Depends(tools_module.get_tools_router)):
-    """
-    Return a filtered OpenAPI schema containing only the tools endpoints.
-    """
-    return responses.JSONResponse(content=tools_router.get_openapi_schema(fastapi))
-
-
-@fastapi.on_event("startup")
-async def startup_event():
-    # Load the configuration from disk
-    await config_service.main_config.load_config()
-
-    # Load user configurations
-    await config_service.users.load_users_configs()
-
-    # Initialize server manager on startup
-    await mcpserver_service.initialize()
-
-    # Store mcpserver_service on app.state
-    fastapi.state.mcpserver_service = mcpserver_service
+    # Startup tasks
+    # Phase 2: Scan and cache all MCPServer metadata for all users (no process start)
+    await fastapi_app.state.mcpserver_service.admin.load_all_mcpservers()
 
     # Initialize tools router with available tools and include it
-    from mcpo_simple_server.routers.tools import tools_router  # pylint: disable=C0415
+    from mcpo_simple_server.routers.public.mcpo_public_tools import mcpo_public_tools_router  # pylint: disable=C0415
     # Initialize the router with actual endpoints
-    await tools_router.initialize(mcpserver_service)
+    await mcpo_public_tools_router.initialize()
     # Include the router with the dynamically created endpoints
-    fastapi.include_router(tools_router.router)
+    fastapi_app.include_router(mcpo_public_tools_router.router)
 
-    # Start periodic cleanup task for idle private server instances
-    asyncio.create_task(periodic_idle_server_cleanup())
+    # Set up MCP Streamable HTTP integration
+    setup_mcp_streamable(fastapi_app)
+    logger.info("MCP Streamable HTTP integration initialized")
 
+    # Set up MCP SSE integration
+    setup_mcp_sse(
+        fastapi_app,
+        sse_connect_path="/api/v1/sse",
+        sse_message_post_path="/api/v1/sse/messages/"
+    )
+    logger.info("MCP SSE integration initialized")
 
-async def periodic_idle_server_cleanup():
-    """
-    Periodically clean up idle private server instances.
-    Runs every 5 minutes by default.
-    """
-    cleanup_interval = int(os.getenv("PRIVATE_MCPSERVER_CLEANUP_INTERVAL", "300"))  # Default: 5 minutes
-    logger.info(f"Starting periodic cleanup of idle private servers (interval: {cleanup_interval} seconds)")
+    # Start periodic cleanup task for idle user-specific server instances
+    cleanup_task = asyncio.create_task(periodic_idle_server_cleanup(fastapi_app, 5))
 
-    while True:
-        try:
-            # Wait for the specified interval
-            await asyncio.sleep(cleanup_interval)
+    async with mcp_streamable_lifespan():
+        yield  # This is where the FastAPI application runs
 
-            # Clean up idle private servers
-            result = await mcpserver_service.cleanup_idle_private_servers()
-
-            if result["cleaned_servers"]:
-                logger.info(
-                    f"Cleaned up {len(result['cleaned_servers'])} idle private servers: "
-                    f"{', '.join([srv['private_server_name'] for srv in result['cleaned_servers']])}"
-                )
-            else:
-                logger.debug("No idle private servers to clean up")
-
-        except asyncio.CancelledError:
-            logger.info("Private server cleanup task cancelled")
-            break
-        except Exception as e:
-            logger.error(f"Error in private server cleanup task: {str(e)}")
-            # Continue running despite errors
-            await asyncio.sleep(60)  # Wait a bit before retrying after an error
-
-
-@fastapi.on_event("shutdown")
-async def shutdown_event():
-    """Gracefully shut down all server processes when the application is terminated."""
+    # Shutdown tasks
     logger.info("Shutting down server processes...")
 
     try:
@@ -172,33 +92,115 @@ async def shutdown_event():
         loop = asyncio.get_running_loop()
 
         # Schedule a force exit after a short delay (3 seconds)
-        # This ensures we don't hang indefinitely even if the regular shutdown fails
         force_exit_handle = loop.call_later(3.0, lambda: os._exit(0))
         logger.warning("Scheduled force exit in 3 seconds if graceful shutdown fails")
 
         # First, close all SSE connections
-        from mcpo_simple_server.routers.mcp_sse import sse_transport  # pylint: disable=C0415
-        logger.info("Shutting down SSE transport...")
-        await sse_transport.shutdown()
-        logger.info("All SSE connections closed successfully")
+        # from mcpo_simple_server.routers.mcp.messages_handlers.utils import sse_transport    # pylint: disable=C0415
+        # logger.info("Shutting down SSE transport...")
+        # await sse_transport.shutdown()
+        # logger.info("All SSE connections closed successfully")
 
-        # Then shutdown all server processes (both public and private)
+        # Then shutdown all server processes (both global and user-specific)
         logger.info("Shutting down server manager...")
-        await mcpserver_service.stop_all_mcpservers()
+        await fastapi_app.state.mcpserver_service.admin.stop_all_mcpservers()
         logger.info("All server processes terminated successfully")
 
         # If we got here successfully, we can cancel the force exit
         logger.info("Graceful shutdown succeeded, cancelling force exit")
         force_exit_handle.cancel()
 
-        # But still exit immediately to avoid Uvicorn waiting for connections
-        logger.info("Exiting immediately")
-        os._exit(0)
+        # Cleanup the periodic task
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
+
     except Exception as e:
         logger.error(f"Error during shutdown: {str(e)}")
-        # Force exit on error - don't wait for Uvicorn
+        # Force exit on error
         logger.critical("Forcing immediate exit due to shutdown error")
         os._exit(1)
+
+app = FastAPI(
+    title=APP_NAME,
+    description="A simple FastAPI server template",
+    version=str(APP_VERSION),
+    lifespan=lifespan
+)
+
+# Setup middleware
+setup_middleware(app)
+
+
+# Include routers
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+app.include_router(root_module.router)      # Include the root router with health and ping endpoints
+app.include_router(user_module.router)      # Test 020
+app.include_router(mcpservers_module.router)
+# app.include_router(prompts_module.router)
+app.include_router(admin_module.router)     # Test 030
+app.include_router(public_module.router)
+app.include_router(ui_module.router)
+
+def custom_openapi():
+    """
+    Custom OpenAPI generator that includes dynamic tool endpoints and patches /user/me.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        routes=app.routes,
+    )
+    # Merge custom SSE paths
+    if 'paths' not in schema:
+        schema['paths'] = {}
+    schema['paths'].update(SSE_OPENAPI_PATHS)
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
+async def periodic_idle_server_cleanup(fastapi_app: FastAPI, cleanup_interval: int = MCPSERVER_CLEANUP_INTERVAL, idle_timeout_seconds: int = MCPSERVER_CLEANUP_TIMEOUT):
+    """
+    Periodically clean up idle user-specific server instances.
+    Runs every 5 seconds by default.
+    """
+    logger.info(f"Starting periodic cleanup of idle user servers (interval: {cleanup_interval} seconds)")
+
+    while True:
+        try:
+            # Wait for the specified interval
+            await asyncio.sleep(cleanup_interval)
+
+            # Clean up idle user-specific servers using the admin manager
+            mcpserver_service: McpServerService = fastapi_app.state.mcpserver_service
+            result = await mcpserver_service.admin.cleanup_idle_mcpservers(idle_timeout_seconds)
+
+            if result["cleaned_servers"]:
+                logger.info(
+                    f"Cleaned up {len(result['cleaned_servers'])} idle user servers: "
+                    f"{', '.join([srv['mcpserver_id'] for srv in result['cleaned_servers']])}"
+                )
+            else:
+                logger.debug("No idle user servers to clean up")
+
+        except asyncio.CancelledError:
+            logger.info("User server cleanup task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in user server cleanup task: {str(e)}")
+            # Continue running despite errors
+            await asyncio.sleep(60)  # Wait a bit before retrying after an error
+
+
+# Shutdown logic moved to lifespan context manager
 
 
 # Register signal handlers

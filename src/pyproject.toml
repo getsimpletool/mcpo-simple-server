@@ -18,18 +18,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.103.1",
-    "uvicorn>=0.23.2",
-    "pydantic>=2.3.0",
-    "sse-starlette>=1.6.5",
-    "loguru>=0.7.0",
-    "python-dotenv>=1.0.0",
-    "uuid>=1.30",
-    "python-jose[cryptography]",
-    "passlib[bcrypt]>=1.7.4",
-    "aiofiles>=23.1.1",
-]
+dynamic = ["dependencies"]
 
 [project.urls]
 "Homepage" = "https://getsimpletool.org"
@@ -48,4 +37,4 @@ mcpo_simple_server = ["**/*.md", "**/*.sh"]
 mcpo_simple_server = ["data/**", ".env"]
 
 [tool.setuptools.dynamic]
-version = {attr = "mcpo_simple_server._version.__version__"}
+version = {attr = "mcpo_simple_server.__version__"}

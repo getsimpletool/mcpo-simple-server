@@ -1,0 +1,6 @@
+name: release-pypi
+on:
+  workflow_call:
+jobs:
+  pytest:
+    uses: ./.github/workflows/reusable-pytest.yml

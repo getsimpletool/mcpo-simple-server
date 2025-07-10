@@ -1,0 +1,38 @@
+services:
+  mcpo-simple-server:
+    hostname: mcpo-simple-server
+    container_name: mcpo-simple-server
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.slim
+      args:
+        - APP_VERSION=${APP_VERSION:-0.0.0}
+    shm_size: '2gb'
+    ports:
+      - 8000:8000     # API HTTP MCPoSimpleServer port
+    # Set limit CPU core = 2
+    cpus: '2'
+    # Set limit memory = 3GB
+    mem_limit: '3g'
+    environment:
+      - PUID=1000
+      - PGID=100
+      - TZ=CET
+    #env_file:
+    #  - mcpo-simple-server.env
+    volumes:
+      - data:/app/mcpo_simple_server/data
+    restart: unless-stopped
+
+networks:
+  default:
+    name: mcpo-simple-server
+
+# Create volume for data
+volumes:
+  data:
+    name: mcpo-simple-server-data
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/

@@ -1,40 +1,55 @@
 """
-Public Router Package
+Package/Module: Public Router - Publicly accessible endpoints without authentication
 
-This package contains all the public-facing router functionality.
+High Level Concept:
+-------------------
+The Public Router provides endpoints that are accessible without authentication,
+offering public information about available MCP servers and prompts. It serves as
+the entry point for clients to discover available resources before authentication.
+
+Architecture:
+-------------
+- Modular organization with separate handler files for different public resources
+- No authentication requirements for any endpoints
+- Read-only access to public MCP server information
+- Public prompt management for shared prompt resources
+
+Endpoints:
+----------
+* /public/mcpservers/* - Public MCP server operations
+  - GET /public/mcpservers - List all publicly available MCP servers
+  - GET /public/mcpservers/{name} - Get details of a specific public MCP server
+* /public/prompts/* - Public prompt operations
+  - GET /public/prompts - List all publicly available prompts
+  - GET /public/prompts/{prompt_id} - Get a specific public prompt
+* /health - Health check endpoint
+  - GET /health - Check server health status
+* / - Root endpoint
+  - GET / - Get basic server information
+
+Workflow:
+---------
+1. Requests are received without authentication requirements
+2. Requests are routed to specialized handlers based on the resource type
+3. Public resource data is retrieved from the appropriate service
+4. Results are returned with standardized response formats
+
+Notes:
+------
+- All public endpoints are accessible without authentication
+- Only read operations are supported for security reasons
+- Public resources are shared across all users of the system
+- Sensitive information is filtered from public responses
 """
-from typing import Optional
-from fastapi import APIRouter, Request
-from mcpo_simple_server.services.mcpserver import McpServerService
-from mcpo_simple_server.services.prompt_manager import PromptManager
-from mcpo_simple_server.config import CONFIG_MAIN_FILE_PATH
 
+from fastapi import APIRouter
 router = APIRouter(
-    prefix="/public",
-    tags=["Public MCP Server and Prompts"],
+    prefix="/api/v1/public",
+    tags=["Public"],
 )
 
-# Global prompt manager instance
-PROMPT_MANAGER: Optional[PromptManager] = None
-
-
-def get_mcpserver_service(request: Request) -> McpServerService:
-    return request.app.state.mcpserver_service
-
-
-async def get_prompt_manager() -> PromptManager:
-    """
-    Get the prompt manager instance.
-
-    Returns:
-        The prompt manager instance
-    """
-    global PROMPT_MANAGER
-    if PROMPT_MANAGER is None:
-        PROMPT_MANAGER = PromptManager(CONFIG_MAIN_FILE_PATH)
-        await PROMPT_MANAGER.load_all_prompts()
-    return PROMPT_MANAGER
 
 # Import modules to register routes
-from . import mcpservers  # noqa: F401, E402
-from . import prompts  # noqa: F401, E402
+from . import v1_get_mcpservers             # noqa: F401, E402
+from . import v1_get_openapi_public         # noqa: F401, E402
+# from . import v1_get_prompts              # noqa: F401, E402

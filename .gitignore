@@ -69,3 +69,4 @@ test/mcpServer-compatibility/
 # Src
 src/webui/
 src/__*
+**/*.env

@@ -12,7 +12,7 @@ import time
 from mcpo_simple_server.services.prompt_manager.models.prompts import PromptTemplate, PromptInfo, PromptSource
 from mcpo_simple_server.services.prompt_manager.template_loader import PromptTemplateLoader
 from mcpo_simple_server.services.prompt_manager.template_executor import PromptTemplateExecutor
-from mcpo_simple_server.config import CONFIG_MAIN_FILE_PATH
+from mcpo_simple_server.config import CONFIG_STORAGE_PATH
 
 
 class PromptManager:
@@ -21,12 +21,12 @@ class PromptManager:
     Handles loading, saving, and executing prompts.
     """
 
-    def __init__(self, config_path: str = CONFIG_MAIN_FILE_PATH):
+    def __init__(self, config_path: str = CONFIG_STORAGE_PATH):
         """
         Initialize the prompt manager.
 
         Args:
-            config_path: Path to the configuration directory (defaults to global CONFIG_MAIN_FILE_PATH)
+            config_path: Path to the configuration directory (defaults to global CONFIG_STORAGE_PATH)
         """
         self.config_path = config_path
         # Primary prompts directory in config path

@@ -4,6 +4,9 @@ include setup.py
 
 recursive-include mcpo_simple_server *.py
 recursive-include mcpo_simple_server *.sh
+recursive-include mcpo_simple_server *.pot
+recursive-include mcpo_simple_server *.po
+recursive-include mcpo_simple_server *.j2
 
 # Exclude data directory and .env file
 prune mcpo_simple_server/data

@@ -18,27 +18,36 @@ class RequestLoggingMiddleware:
         """Process the request and log information about it"""
         # Generate a unique request ID
         request_id = str(time.time())
-        
+
         # Log the request
         logger.info(
-            f"Request {request_id}: {request.method} {request.url.path}"
+            "Request %s: %s %s",
+            request_id,
+            request.method,
+            request.url.path
         )
-        
+
         # Process the request
         start_time = time.time()
         try:
             response = await call_next(request)
             process_time = time.time() - start_time
-            
+
             # Log the response
             logger.info(
-                f"Response {request_id}: {response.status_code} completed in {process_time:.3f}s"
+                "Response %s: %s completed in %.3fs",
+                request_id,
+                response.status_code,
+                process_time
             )
             return response
         except Exception as e:
             process_time = time.time() - start_time
             logger.error(
-                f"Error {request_id}: {str(e)} occurred after {process_time:.3f}s"
+                "Error %s: %s occurred after %.3fs",
+                request_id,
+                str(e),
+                process_time
             )
             raise
 

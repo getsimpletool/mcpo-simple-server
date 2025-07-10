@@ -1,0 +1,59 @@
+FROM node:alpine3.22
+
+# TODO: https://www.fromlatest.io/
+LABEL MAINTAINER="Artur Zdolinski artur@zdolinski.com"
+ARG TZ
+ARG USER=appuser
+ARG UID=1000
+ARG GID=100
+ARG APP_FOLDER=/app/mcpo_simple_server
+
+USER root
+### Envrionment config
+ENV PYTHONUNBUFFERED=1
+ENV PIP_BREAK_SYSTEM_PACKAGES 1
+ENV APT_INSTALL=
+ENV APPUSER_PASSWORD=
+ENV USER=${USER} \
+    HOME=/home/${USER} \
+    STARTUPDIR=/dockerstartup \
+    DEBIAN_FRONTEND=noninteractive \
+    APP_FOLDER=${APP_FOLDER} \
+    TZ=Etc/UTC
+
+WORKDIR /tmp
+
+# Install dependencies
+
+RUN apk add --update --no-cache python3 py3-pip && \
+    ln -sf python3 /usr/bin/python && \
+    pip install --no-cache --upgrade pip setuptools && \
+    addgroup -S appgroup && \
+    adduser -S appuser -G appgroup && \
+    mkdir -p ${APP_FOLDER} && \
+    chown -R appuser:appgroup /app
+
+### Install python uvx
+RUN PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install uv && \
+    pip3 install setuptools
+
+# Switch to user
+USER appuser
+ADD ./docker/src/startup/ $STARTUPDIR
+WORKDIR /home/appuser
+
+### Install MCPoSimpleServer
+ADD --chown=$USER:$GID ./src/mcpo_simple_server ${APP_FOLDER}/
+ARG APP_VERSION
+RUN rm -rf ${APP_FOLDER}/data/config \
+    && rm -rf ${APP_FOLDER}/.env \
+    && pip3 install -r ${APP_FOLDER}/requirements.txt \
+    && if [ ! -z "${APP_VERSION}" ]; then \
+    echo "__version__ = \"${APP_VERSION}\"" > ${APP_FOLDER}/_version.py; \
+    fi
+
+# Use supervisord to manage both VNC and Uvicorn
+WORKDIR ${APP_FOLDER}
+ENTRYPOINT ["/app/mcpo_simple_server/run.sh"]
+#ENTRYPOINT [ "ls", "-la", "/app/mcpo_simple_server/" ]
+EXPOSE 8000
