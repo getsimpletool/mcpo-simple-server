@@ -16,15 +16,17 @@ Architecture:
         - Returns the direct result of the tool execution or raises an appropriate exception.
 """
 
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union, Iterable
 from loguru import logger
 
 from mcp.types import (
     TextContent,
     ImageContent,
     EmbeddedResource,
-    ErrorData
+    ErrorData,
+    ContentBlock
 )
+from mcp.server.lowlevel.server import StructuredContent, UnstructuredContent, CombinationContent
 from mcpo_simple_server.services.mcpserver.models import MCPoTool
 from mcpo_simple_server.services import get_mcpserver_service
 
@@ -33,7 +35,7 @@ async def mcp_call_tool(
     username: Optional[str],
     tool_name: str,
     arguments: Optional[Dict[str, Any]]
-) -> Union[List[Union[TextContent, ImageContent, EmbeddedResource]], ErrorData]:
+) -> Union[StructuredContent, UnstructuredContent, CombinationContent, ErrorData]:
     """
     Core logic to find and execute an MCP tool.
 
@@ -98,19 +100,36 @@ async def mcp_call_tool(
 
         # Check for tool-specific error (isError=true in result)
         result_field = full_json_rpc_response.get("result", {})
-        tool_execution_result = result_field.get("content", [])
+        content_list = result_field.get("content", [])
+        unstructured_content: UnstructuredContent = list(content_list)
         if result_field.get("isError", False):
-            error_message = tool_execution_result[0].get("text", "Tool execution error") if isinstance(tool_execution_result, list) else str(tool_execution_result)
+            if isinstance(unstructured_content, list) and len(unstructured_content) > 0 and isinstance(unstructured_content[0], TextContent):
+                error_message = unstructured_content[0].text
+            else:
+                error_message = str("Content which was returned was not match UnstructuredContent object: " + str(unstructured_content))
             logger.error(f"Core: Tool '{tool_name}' execution error: {error_message}")
             return ErrorData(
                 code=-32000,  # Custom error code for tool execution errors
                 message=error_message
             )
 
-        # Get the content from the result field, assuming it's valid
-        # If there's any issue with the content structure, it will be handled by the MCP server framework
-        logger.info(f"Core: Tool '{tool_name}' executed successfully. Result contains {len(tool_execution_result)} content items.")
-        return tool_execution_result
+        structured_content: StructuredContent | None = result_field.get("structuredContent", None)
+
+        logger.info(f"Core: Tool '{tool_name}' executed successfully. ")
+        # If structuredContent and unstructuredContent are both present, return CombinationContent
+        if len(unstructured_content) > 0 and structured_content is not None:
+            logger.info(f"Result contains unstructured_content {len(unstructured_content)} content items and structured_content {len(structured_content)} content items.")
+            # CombinationContent constructor takes a single argument - a dict with both content types
+            combination_data: CombinationContent = (unstructured_content, structured_content)
+            return combination_data
+
+        if len(unstructured_content) > 0 and structured_content is None:
+            logger.info(f"Result contains unstructured_content {len(unstructured_content)} content items.")
+            return unstructured_content
+
+        if len(unstructured_content) == 0 and structured_content is not None:
+            logger.info(f"Result contains structured_content {len(structured_content.__dict__)} content items.")
+            return structured_content
 
     except Exception as e:  # Catch all exceptions and convert to JSONRPCError
         logger.error(f"Core: Error while executing tool '{tool_name}' on server '{mcpserver_id}': {e}", exc_info=True)

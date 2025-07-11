@@ -137,6 +137,13 @@ class DDBStorage(StorageBackendAbstract):
         with self._lock:
             raw = DDB.at(path).read()  # type: ignore
         if raw:
+            # MIGRATION: If api_keys is a list, convert to dict with default metadata
+            if "api_keys" in raw and isinstance(raw["api_keys"], list):
+                from mcpo_simple_server.services.config.models.user_config_model import ApiKeyMetadataModel
+                migrated = {}
+                for k in raw["api_keys"]:
+                    migrated[k] = ApiKeyMetadataModel().model_dump()
+                raw["api_keys"] = migrated
             user_config = UserConfigModel(**raw)
             self._user_config_cache[username] = user_config
             return user_config

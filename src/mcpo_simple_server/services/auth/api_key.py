@@ -68,6 +68,8 @@ def get_username_from_api_key(api_key: str) -> str:
     """
     try:
         # Remove the prefix to get the encrypted data
+        if api_key.startswith("Bearer "):
+            api_key = api_key[7:]
         if not api_key.startswith(API_KEY_PREFIX):
             raise ValueError("Invalid API key format: missing prefix")
 

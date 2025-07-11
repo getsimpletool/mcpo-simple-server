@@ -9,6 +9,15 @@ if [ -f "$ENV_FILE" ]; then
   echo "=== Loading environment variables from $ENV_FILE ==="
   # shellcheck source=/dev/null
   source "$ENV_FILE"
+  # Explicitly export Twine credentials
+  if [ -n "${TWINE_USERNAME:-}" ]; then
+    export TWINE_USERNAME
+    echo "Exported TWINE_USERNAME"
+  fi
+  if [ -n "${TWINE_PASSWORD:-}" ]; then
+    export TWINE_PASSWORD
+    echo "Exported TWINE_PASSWORD"
+  fi
 fi
 
 echo "=== Testing package imports ===="
@@ -91,7 +100,7 @@ case "$publish_test" in
       echo "Please set these variables in your environment or build.env file"
       exit 1
     fi
-    python -m twine upload --repository testpypi dist/*
+    python -m twine upload --verbose --repository testpypi dist/*
     ;;
   *) ;;
 esac

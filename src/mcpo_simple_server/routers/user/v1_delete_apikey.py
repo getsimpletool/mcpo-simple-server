@@ -22,7 +22,7 @@ class APIKeyDeleteRequest(BaseModel):
     )
 
 
-@router.delete("/api-keys", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/api-key", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_my_api_key(
     request: Request,
     key_info: APIKeyDeleteRequest = Body(...),
@@ -43,7 +43,7 @@ async def delete_my_api_key(
     if key_to_delete not in user_data.api_keys:
         logger.warning(f"API Key '{key_to_delete}' not found for user '{current_user.username}'.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API Key not found")
-    user_data.api_keys.remove(key_to_delete)
+    del user_data.api_keys[key_to_delete]
 
     # Save the updated user data
     try:

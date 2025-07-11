@@ -44,9 +44,12 @@ async def test_admin_mcpserver_lifecycle(server_url, admin_auth_token):
             content=json.dumps(time_server_config)
         )
 
-        assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         data = resp.json()
-        assert data.get("status") in ("success", "running"), f"Expected 'success' or 'running', got {data.get('status')}: {data}"
+        assert isinstance(data, list), f"Expected a list, got {type(data)}: {data}"
+        assert len(data) > 0, f"Expected non-empty list, got {data}"
+        server = data[0]
+        assert server.get("status") in ("success", "running"), f"Expected 'success' or 'running', got {server.get('status')}: {server}"
 
         # 2. Verify server appears in the list
         resp = await client.get(f"{server_url}/api/v1/mcpservers/config", headers=headers)

@@ -1,16 +1,17 @@
-import asyncio
 import os
-import signal
 import sys
+import asyncio
+import signal
+from typing import Any, Optional
 from contextlib import asynccontextmanager
-from typing import Any
 from mcpo_simple_server.logger import logger
 from mcpo_simple_server.config import (
     CONFIG_STORAGE_PATH,
     MCPSERVER_CLEANUP_INTERVAL,
     MCPSERVER_CLEANUP_TIMEOUT,
     APP_VERSION,
-    APP_NAME
+    APP_NAME,
+    LIB_PATH
 )
 import mcpo_simple_server.routers.root as root_module
 import mcpo_simple_server.routers.user as user_module
@@ -37,7 +38,6 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from typing import Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -133,9 +133,10 @@ app = FastAPI(
 # Setup middleware
 setup_middleware(app)
 
+# Include static files
+app.mount("/assets", StaticFiles(directory=str(os.path.join(LIB_PATH, "assets"))), name="assets")
 
 # Include routers
-app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 app.include_router(root_module.router)      # Include the root router with health and ping endpoints
 app.include_router(user_module.router)      # Test 020
 app.include_router(mcpservers_module.router)
@@ -143,6 +144,7 @@ app.include_router(mcpservers_module.router)
 app.include_router(admin_module.router)     # Test 030
 app.include_router(public_module.router)
 app.include_router(ui_module.router)
+
 
 def custom_openapi():
     """

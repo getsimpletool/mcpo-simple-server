@@ -38,12 +38,12 @@ async def custom_lifespan(server: MCPServer[None]) -> AsyncIterator[None]:
     """Custom lifespan manager that correctly yields None."""
     # You can put startup logic here, e.g., initializing resources.
     # Access server state via server.state if needed (similar to app.state in FastAPI).
-    logger.debug(f"Lifespan: Server '{getattr(server, "name", "unknown")}' starting up...")
+    logger.debug(f"Lifespan: Server '{getattr(server, 'name', 'unknown')}' starting up...")
     try:
         yield  # Crucially, this yields None implicitly
     finally:
         # You can put shutdown logic here, e.g., cleaning up resources.
-        logger.debug(f"Lifespan: Server '{getattr(server, "name", "unknown")}' shutting down...")
+        logger.debug(f"Lifespan: Server '{getattr(server, 'name', 'unknown')}' shutting down...")
 
 
 def create_mcp_server() -> MCPServer[None]:

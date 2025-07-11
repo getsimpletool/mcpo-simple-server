@@ -10,7 +10,7 @@ async def test_admin_create_and_delete_api_key(server_url, admin_auth_token):
     """
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {admin_auth_token}"}
-        resp = await client.post(f"{server_url}/api/v1/user/api-keys", headers=headers)
+        resp = await client.post(f"{server_url}/api/v1/user/api-key", headers=headers)
         assert resp.status_code == 200, f"API key creation failed: {resp.text}"
         api_key = resp.json().get("api_key")
         assert api_key, "No api_key returned in response"
@@ -18,7 +18,7 @@ async def test_admin_create_and_delete_api_key(server_url, admin_auth_token):
         delete_headers = {"Authorization": f"Bearer {admin_auth_token}", "Content-Type": "application/json"}
         delete_resp = await client.request(
             "DELETE",
-            f"{server_url}/api/v1/user/api-keys",
+            f"{server_url}/api/v1/user/api-key",
             headers=delete_headers,
             content=json.dumps({"api_key": api_key})
         )

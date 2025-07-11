@@ -76,9 +76,12 @@ async def test_505_donald_mcpserver(server_url, admin_auth_token):
             json=time_server_config
         )
 
-        assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         data = resp.json()
-        assert data.get("status") == "running", f"Expected 'running', got {data.get('status')}: {data}"
+        assert isinstance(data, list), f"Expected a list, got {type(data)}: {data}"
+        assert len(data) > 0, f"Expected non-empty list, got {data}"
+        server = data[0]
+        assert server.get("status") == "running", f"Expected 'running', got {server.get('status')}: {server}"
 
         # Wait a bit for the server to initialize
         await asyncio.sleep(2)
@@ -101,9 +104,12 @@ async def test_505_donald_mcpserver(server_url, admin_auth_token):
             json=calculator_server_config
         )
 
-        assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         data = resp.json()
-        assert data.get("status") == "running", f"Expected 'running', got {data.get('status')}: {data}"
+        assert isinstance(data, list), f"Expected a list, got {type(data)}: {data}"
+        assert len(data) > 0, f"Expected non-empty list, got {data}"
+        server = data[0]
+        assert server.get("status") == "running", f"Expected 'running', got {server.get('status')}: {server}"
 
         # Wait a bit for the server to initialize
         await asyncio.sleep(2)

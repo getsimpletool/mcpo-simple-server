@@ -62,7 +62,7 @@ async def create_new_user(
         hashed_password=get_password_hash(user_in.password),
         group="users",
         disabled=user_in.disabled,
-        api_keys=[],
+        api_keys={},
         env={},
         mcpServers={}
     )

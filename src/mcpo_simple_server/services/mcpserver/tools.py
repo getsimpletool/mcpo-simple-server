@@ -429,8 +429,7 @@ class McpServerToolsService:
 
         try:
             active_mcpservers: Dict[str, Any] = self.parent.controller.list_mcpservers()
-
-            if username:  # Authenticated user path
+            if username:
                 user_config = await config_service.user_config.get_config(username)
                 if not user_config or not hasattr(user_config, 'mcpServers'):
                     logger.warning(f"User config not found or invalid for {username}. Returning empty tool list.")

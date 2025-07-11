@@ -129,7 +129,7 @@ async def test_admin_api_keys(server_url):
 
         # Create API key
         create_resp = await client.post(
-            f"{server_url}/api/v1/user/api-keys",
+            f"{server_url}/api/v1/user/api-key",
             headers=headers,
             json={"name": "test-key", "expires_in": 3600}
         )
@@ -143,7 +143,7 @@ async def test_admin_api_keys(server_url):
         # For DELETE requests with a body, we need to use the httpx.AsyncClient.request method
         delete_resp = await client.request(
             "DELETE",
-            f"{server_url}/api/v1/user/api-keys",
+            f"{server_url}/api/v1/user/api-key",
             headers=headers,
             json={"api_key": api_key}
         )

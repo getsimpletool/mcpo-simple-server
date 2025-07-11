@@ -30,11 +30,11 @@ Usage Example:
 """
 
 from loguru import logger
-from typing import Dict, Any, List, AsyncIterator
+from typing import Dict, Any, List, AsyncIterator, Union
 from contextlib import asynccontextmanager
 # MCP specific imports
-from mcp.server.lowlevel.server import Server as MCPServer
-from mcp.types import ErrorData, Tool as MCPTool, TextContent, ImageContent, EmbeddedResource
+from mcp.server.lowlevel.server import Server as MCPServer, StructuredContent, UnstructuredContent, CombinationContent
+from mcp.types import ErrorData, Tool as MCPTool
 from mcpo_simple_server.services.auth.api_key import get_username_from_api_key
 from mcpo_simple_server.services.mcp_core_logic.mcp_server_functions import _global_list_tools_handler
 from mcpo_simple_server.services.mcp_core_logic.call_tool import mcp_call_tool
@@ -52,12 +52,12 @@ async def custom_lifespan(server: MCPServer[None]) -> AsyncIterator[None]:
         client_ip, client_port = scope["client"]
         client_info = f"{client_ip}:{client_port}"
 
-    logger.debug(f"Lifespan (SSE): Server '{getattr(server, "name", "unknown")}' starting up - Client: {client_info}")
+    logger.debug(f"Lifespan (SSE): Server '{getattr(server, 'name', 'unknown')}' starting up - Client: {client_info}")
     try:
         yield  # Crucially, this yields None implicitly
     finally:
         # You can put shutdown logic here, e.g., cleaning up resources.
-        logger.debug(f"Lifespan (SSE): Server '{getattr(server, "name", "unknown")}' shutting down - Client: {client_info}")
+        logger.debug(f"Lifespan (SSE): Server '{getattr(server, 'name', 'unknown')}' shutting down - Client: {client_info}")
 
 
 def create_mcp_server() -> MCPServer[None]:
@@ -118,7 +118,7 @@ def create_mcp_server() -> MCPServer[None]:
         return await _global_list_tools_handler(username=username)
 
     @mcp_server.call_tool()
-    async def _call_tool_handler(tool_name: str, arguments: Dict[str, Any] | None) -> list[TextContent | ImageContent | EmbeddedResource]:
+    async def _call_tool_handler(tool_name: str, arguments: Dict[str, Any] | None) -> StructuredContent | UnstructuredContent | CombinationContent:
         username = _get_username()
         result = await mcp_call_tool(username=username, tool_name=tool_name, arguments=arguments)
         if isinstance(result, ErrorData):

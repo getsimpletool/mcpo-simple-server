@@ -48,22 +48,33 @@ async def execute_tool(
     logger.info(f"Tool arguments: {request_body}")
     try:
         # Execute the tool with the provided parameters
-        result = await mcpserver_service.invoke_tool(
+        response = await mcpserver_service.invoke_tool(
             mcpserver_id=mcpserver_id,
             tool_name=tool_name,
             parameters=request_body or {}
         )
+        # print(result)
+        # {'jsonrpc': '2.0', 'id': 1, 'result': {'content': [{'type': 'text', 'text': '5'}], 'structuredContent': {'result': '5'}, 'isError': False}}
+        result = response.get("result", {})
 
         # Check for error
-        if "isError" in result and result["isError"]:
-            raise HTTPException(status_code=404, detail=result["result"])
+        if "isError" in response and response["isError"]:
+            raise HTTPException(status_code=404, detail=result)
 
         # Log successful execution
         logger.info(f"Tool {tool_name} executed successfully for user {current_user.username}")
 
-        # Process the tool response
-        processed_result = process_tool_response(result.get("result", {}))
-        return processed_result
+        # Return 'structuredContent' if present and 'content' is not
+        if result is None or result == {}:
+            if "structuredContent" in result and result["structuredContent"] is not None:
+                return result["structuredContent"]
+
+        # Return 'content' if present
+        if "content" in result and result["content"] is not None:
+            processed_result = process_tool_response(result)
+            return processed_result
+
+        raise HTTPException(status_code=404, detail="No result returned from tool execution")
 
     except Exception as e:
         # Log the error

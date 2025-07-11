@@ -9,7 +9,7 @@ router = APIRouter(
 )
 
 __all__ = ["router"]
-from . import v1_post_mcpserver             # noqa: F401, E402
+from . import v1_post_mcpservers            # noqa: F401, E402
 from . import v1_get_mcpservers_config      # noqa: F401, E402
 from . import v1_get_mcpservers_status      # noqa: F401, E402
 from . import v1_post_mcpserver_start       # noqa: F401, E402

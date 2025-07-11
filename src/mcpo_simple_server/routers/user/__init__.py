@@ -78,8 +78,9 @@ from . import v1_get_me  # noqa: F401, E402
 from . import v1_put_password  # noqa: F401, E402
 from . import v1_get_config  # noqa: F401, E402
 
-from . import v1_post_apikeys  # noqa: F401, E402
-from . import v1_delete_apikeys  # noqa: F401, E402
+from . import v1_post_apikey  # noqa: F401, E402
+from . import v1_delete_apikey  # noqa: F401, E402
+from . import v1_put_apikey_metadata  # noqa: F401, E402
 
 from . import v1_get_env  # noqa: F401, E402
 from . import v1_put_env  # noqa: F401, E402

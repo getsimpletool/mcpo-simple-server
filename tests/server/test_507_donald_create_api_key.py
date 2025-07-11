@@ -58,7 +58,7 @@ async def test_507_donald_create_api_key(server_url, admin_auth_token):
 
         # 2. Create API key for Donald
         resp = await client.post(
-            f"{server_url}/api/v1/user/api-keys",
+            f"{server_url}/api/v1/user/api-key",
             headers=donald_headers
         )
 

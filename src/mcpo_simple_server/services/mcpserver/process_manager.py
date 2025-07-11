@@ -30,6 +30,7 @@ import json
 import os
 import asyncio
 import datetime
+import copy
 from loguru import logger
 from fastapi import HTTPException
 from typing import TYPE_CHECKING
@@ -83,10 +84,10 @@ class McpServerProcessManager:
 
         try:
             # Replace 'uvx' with 'uv' and handle different command formats
-            final_command = mcpserver.command
+            original_command = copy.deepcopy(mcpserver.command)
             final_args = mcpserver.args.copy()
 
-            if final_command == "uvx":
+            if mcpserver.command == "uvx":
                 final_command = "uv"
 
                 if len(final_args) > 0:
@@ -96,17 +97,23 @@ class McpServerProcessManager:
                     else:
                         # If there are no arguments after the module name
                         final_args = ["tool", "run", module_name]
-                    logger.info(f"mcpserver.process_manager.start_mcpserver: Converting command for {mcpserver.name}: 'uvx {' '.join(final_args)}' to '{final_command} {' '.join(final_args)}'")
+                    logger.info(
+                        f"mcpserver.process_manager.start_mcpserver: Converting command for {mcpserver.name}: '{original_command} {' '.join(final_args)}' to '{final_command} {' '.join(final_args)}'")
 
             # Handle uvx as the first part of the command string
-            elif final_command.startswith("uvx "):
-                new_command = "uv run " + final_command[4:]
-                logger.info(f"mcpserver.process_manager.start_mcpserver: Converting command for {mcpserver.name}: '{final_command}' to '{new_command}'")
-                final_command = new_command
-                final_args = []
+            elif mcpserver.command.startswith("uvx "):
+                final_command = "uv"
+                final_args = ["run"] + final_args
+                logger.info(
+                    f"mcpserver.process_manager.start_mcpserver: Converting command for {mcpserver.name}: '{original_command} {' '.join(final_args)}' to '{final_command} {' '.join(final_args)}'")
+            elif mcpserver.command.startswith("npx"):
+                final_command = "npm"
+                final_args = ["exec"] + final_args
+                logger.info(
+                    f"mcpserver.process_manager.start_mcpserver: Converting command for {mcpserver.name}: '{original_command} {' '.join(final_args)}' to '{final_command} {' '.join(final_args)}'")
             else:
-                final_command = mcpserver.command
-                final_args = mcpserver.args.copy()
+                final_command = copy.deepcopy(mcpserver.command)
+                final_args = copy.deepcopy(mcpserver.args)
                 logger.info(f"mcpserver.process_manager.start_mcpserver: Command for {mcpserver.name}: '{final_command}' + args: '{final_args}'")
 
             # Prepare environment variables

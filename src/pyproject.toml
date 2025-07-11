@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcpo-simple-server"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 description = "Python-based LLM server that implements the Model Context Protocol (MCP)"
 readme = "mcpo_simple_server/README.md"
 authors = [
@@ -13,12 +13,11 @@ authors = [
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-requires-python = ">=3.12"
-dynamic = ["dependencies"]
+requires-python = ">=3.11"
 
 [project.urls]
 "Homepage" = "https://getsimpletool.org"
@@ -31,7 +30,7 @@ mcpo-simple-server = "mcpo_simple_server.__main__:main"
 packages = ["mcpo_simple_server"]
 
 [tool.setuptools.package-data]
-mcpo_simple_server = ["**/*.md", "**/*.sh"]
+mcpo_simple_server = ["**/*.md", "**/*.sh", "**/*.j2", "assets/**/*", "templates/**/*"]
 
 [tool.setuptools.exclude-package-data]
 mcpo_simple_server = ["data/**", ".env"]

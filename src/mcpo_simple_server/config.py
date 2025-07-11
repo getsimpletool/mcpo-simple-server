@@ -16,6 +16,7 @@ from mcpo_simple_server.metadata import __version__
 BOOT_TIME = datetime.now()
 
 # --- Application ---
+LIB_PATH = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
 APP_PATH = pathlib.Path(os.getcwd())
 APP_VERSION = str(__version__)
 APP_NAME = "MCPoSimpleServer"
@@ -51,6 +52,7 @@ if ADMIN_BEARER_HACK:
 SALT_PEPPER = os.getenv("SALT", "default_insecure_pepper")  # For MD5 password hashing
 
 # --- JWT ---
+EXIT_ON_ERROR = 0
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")  # Get JWT secret from env
@@ -58,7 +60,7 @@ if JWT_SECRET_KEY is None:
     example_keys = [Fernet.generate_key().decode() for _ in range(3)]
     logger.error("JWT_SECRET_KEY environment variable is not set. It is required for JWT authentication.")
     logger.error("Example valid JWT secret keys:\nJWT_SECRET_KEY=" + "\nJWT_SECRET_KEY=".join(example_keys))
-    sys.exit(1)
+    EXIT_ON_ERROR = 1
 
 # --- API Key ---
 API_KEY_PREFIX = os.getenv("API_KEY_PREFIX", "st-")  # Prefix for generated API keys
@@ -67,6 +69,15 @@ if API_KEY_ENCRYPTION_KEY is None:
     example_keys = [Fernet.generate_key().decode() for _ in range(3)]
     logger.error("API_KEY_ENCRYPTION_KEY environment variable is not set. It is required for API key encryption (Fernet).")
     logger.error("Example valid Fernet keys:\nAPI_KEY_ENCRYPTION_KEY=" + "\nAPI_KEY_ENCRYPTION_KEY=".join(example_keys))
+    EXIT_ON_ERROR = 1
+
+if EXIT_ON_ERROR:
+    logger.error("-----")
+    logger.error("Exiting due to configuration errors.")
+    logger.error("Create {APP_PATH}/.env file with the following environment variables:")
+    logger.error("JWT_SECRET_KEY")
+    logger.error("API_KEY_ENCRYPTION_KEY")
+    logger.error("-----")
     sys.exit(1)
 
 # --- CORS Configuration ---

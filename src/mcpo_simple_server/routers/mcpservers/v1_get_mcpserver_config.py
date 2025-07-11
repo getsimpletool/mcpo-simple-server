@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status, Request
 from loguru import logger
 from typing import TYPE_CHECKING
 from mcpo_simple_server.services.auth import get_current_user
-from mcpo_simple_server.services.config.models import McpServerConfigModel, McpServersListResponse
+from mcpo_simple_server.services.config.models import McpServerConfigModel
 if TYPE_CHECKING:
     from mcpo_simple_server.services.config import ConfigService
     from mcpo_simple_server.services.auth.models import AuthUserModel
@@ -53,7 +53,8 @@ async def get_mcpserver_config(
             )
 
         mcpserver_config = mcpserver_configs[mcpserver_name]
-        return McpServersListResponse(mcpServers={mcpserver_name: McpServerConfigModel(**mcpserver_config.model_dump())})
+        print(mcpserver_config)
+        return McpServerConfigModel(**mcpserver_config.model_dump())
 
     except HTTPException:
         raise

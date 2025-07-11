@@ -50,7 +50,7 @@ async def test_admin_mcpserver_restart(server_url, admin_auth_token):
             headers=headers,
             content=json.dumps(time_server_config)
         )
-        assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 
         # 2. Verify server is running
         resp = await client.get(f"{server_url}/api/v1/mcpservers/{server_name}/status", headers=headers)

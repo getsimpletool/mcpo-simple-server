@@ -35,6 +35,7 @@ def main():
             logger.info(f"Python {check_results[LibType.PYTHON3].version} is installed at {check_results[LibType.PYTHON3].path}")
         if check_results[LibType.NPX].status == "missing":
             logger.error("NPX is not installed. Please install NPX and try again.")
+            logger.error("NPX can be installed by running: apt-get -y install npm && npm install -g npx")
             sys.exit(1)
         else:
             logger.info(f"NPX {check_results[LibType.NPX].version} is installed at {check_results[LibType.NPX].path}")

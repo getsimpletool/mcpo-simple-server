@@ -40,6 +40,11 @@ async def update_mcpserver_env(
         logger.error(f"Failed to retrieve user '{current_user.username}' for mcpserver environment update.")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update mcpserver environment variables")
 
+    # Check if the mcpserver exists for the user
+    if mcpserver_name not in user_data.mcpServers:
+        logger.error(f"McpServer '{mcpserver_name}' not found for user '{current_user.username}' for mcpserver environment update.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="McpServer not found")
+
     # Update the mcpserver environment variables
     user_data.mcpServers[mcpserver_name].env = env_update.env
     success = await config_service.user_config.save_config(user_data)
